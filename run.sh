@@ -28,15 +28,15 @@ COMPOSE_FILE="./docker-compose.yml"
 echo "Generating docker-compose.yml..."
 cat > "$COMPOSE_FILE" <<EOF
 services:
-  ${ContainerName}:
-    container_name: ${ContainerName}
+  ${CONTAINER_NAME}:
+    container_name: ${CONTAINER_NAME}
     build:
       context: ./
       dockerfile: Dockerfile
     volumes:
       - "${HOST_DATA_PATH}:${CONTAINER_DATA_PATH}"
       - "${HOST_UTILES_PATH}:${CONTAINER_UTILES_PATH}"
-    working_dir: ${ContainerWorkspacePath}
+    working_dir: ${CONTAINER_WORKSPACE_PATH}
     command: bash
     stdin_open: true
     tty: true
