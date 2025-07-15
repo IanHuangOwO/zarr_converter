@@ -46,7 +46,7 @@ chmod +x run.sh
 
 You’ll be prompted to enter the path to your **Zarr dataset directory**. The script will handle everything from Docker build to startup.
 
-#### 🛠️ What the Script Does
+#### What the Script Does
 
 - Dynamically generates a `docker-compose.yml`
 - Mounts your dataset at `/workspace/datas`
@@ -60,14 +60,14 @@ You’ll be prompted to enter the path to your **Zarr dataset directory**. The s
 python main.py <input_path> <output_path> <output_type> [options]
 ```
 
-### 📥 Positional Arguments
+### Positional Arguments
 | Argument      | Description |
 |---------------|-------------|
 | `input`       | Path to the input file or directory |
 | `output`      | Output directory for saving results |
 | `output_type` | Output format: `OME-Zarr`, `Zarr`, `Tif`, `Scroll-Tif`, `Nifti`, or `Scroll-Nifti` |
 
-### ⚙️ Optional Arguments
+### Optional Arguments
 | Option | Description |
 |--------|-------------|
 | `--transpose` | Transpose input volume (swap X and Y axes) |
@@ -79,7 +79,7 @@ python main.py <input_path> <output_path> <output_type> [options]
 | `--scroll-axis` | Axis to scroll for 2D slices (0=z, 1=y, 2=x; default: 0) |
 | `--memory-limit` | Max memory (in GB) for processing (default: 32) |
 
-### 📌 Example
+### Example
 ```bash
 python main.py ./input.tif ./output OME-Zarr --transpose --resize-shape 100 512 512 --levels 4 --chunk-size 128
 ```
