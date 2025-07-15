@@ -44,11 +44,11 @@ services:
 # ----- Start the Docker container ----- 
 try {
     Write-Host "Starting container via docker-compose up --build..."
-    docker-compose up --build 
+    docker compose up --build 
 }
 finally {
     Write-Host "`nStopping and cleaning up Docker container..."
-    docker-compose down
+    docker compose down
 
     if (Test-Path $ComposeFile) {
         Remove-Item $ComposeFile -Force

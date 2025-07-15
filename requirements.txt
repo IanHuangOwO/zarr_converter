@@ -3,5 +3,5 @@ dask
 tqdm
 imagecodecs
 scikit-image
-nibabel==3.2.2
-numpy<2.0
+nibabel
+numpy
