@@ -156,6 +156,7 @@ def _save_slice(arr, output_base, output_type):
     if output_type.lower() in ["tif", "scroll-tif"]:
         import tifffile
         logger.info(f"Writing volume to {output_base.with_suffix('.tif')}")
+        print(arr.dtype)
         tifffile.imwrite(str(output_base.with_suffix(".tif")), arr, imagej=True) # type: ignore
     elif output_type.lower() in ["nifti", "scroll-nifti"]:
         import nibabel as nib
@@ -371,7 +372,7 @@ class FileWriter:
                 for i in range(z1 - z0):
                     slice_2d = arr[i, :, :]
                     filename = output_base / f"{output_base.name}_{axis_char}{(z0 + i):05d}"
-                    _save_slice(slice_2d, filename, output_type)
+                    _save_slice(slice_2d.astype(np.uint16), filename, output_type)
 
         else:
             logger.info("Using Zarr temp storage with optional resizing")

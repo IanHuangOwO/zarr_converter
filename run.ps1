@@ -32,6 +32,9 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     volumes:
       - "${HostDataPath}:${ContainerDataPath}"
       - "${HostUtilesPath}:${ContainerUtilesPath}"

@@ -1,0 +1,16 @@
+services:
+  zarr_converter:
+    container_name: zarr_converter
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - "D:/iansaididontcare/Lab/model_trainer/datas/TH:/workspace/datas"
+      - "./utils:/workspace/utils"
+    working_dir: /workspace
+    command: bash
+    stdin_open: true
+    tty: true

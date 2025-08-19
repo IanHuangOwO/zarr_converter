@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 logger = logging.getLogger(__name__)
 
 # Define valid file suffixes
-VALID_SUFFIXES = [".tif", ".tiff", ".nii.gz", ".gz", ".npy", ".png", ".jpg"] # Zarr directories will be handled separately at line 64
+VALID_SUFFIXES = [".tif", ".tiff", ".nii.gz", ".gz", ".png", ".jpg"] # Zarr directories will be handled separately at line 64
 
 @staticmethod
 def _estimate_size_gb(shape: tuple, dtype: np.dtype) -> float:
@@ -57,6 +57,11 @@ def read_tiff(path: Path, read_to_array: bool = True, transpose: bool = False):
     # Metadata-only mode
     shape = arr.shape
     dtype = arr.dtype
+    # normalize to 3D
+    if len(shape) == 2:
+        shape = (1, shape[0], shape[1])
+    elif len(shape) > 3:
+        raise ValueError(f"Unsupported NIfTI shape: {shape}")
     shape = _swap_shape(shape, transpose)
     size_gb = _estimate_size_gb(shape, dtype)
     return shape, dtype, size_gb
@@ -66,16 +71,16 @@ def read_tiff(path: Path, read_to_array: bool = True, transpose: bool = False):
 def read_nii_gz(path: Path, read_to_array: bool = True, transpose: bool = False):
     import nibabel as nib
     
-    img = nib.load(str(path), mmap=True) 
+    img = nib.load(str(path), mmap=True) # type: ignore
     if read_to_array:
-        arr = np.asanyarray(img.dataobj)
+        arr = np.asanyarray(img.dataobj) # type: ignore
         arr = arr[..., np.newaxis] if arr.ndim == 2 else arr
         arr = arr.swapaxes(0, 2)
         return _swap_array(arr, transpose)
     
     # metadata‐only
-    shape = img.shape
-    dtype = img.get_data_dtype()
+    shape = img.shape # type: ignore
+    dtype = img.get_data_dtype() # type: ignore
     # normalize to 3D
     if len(shape) == 2:
         shape = (1, shape[1], shape[0])
@@ -86,22 +91,6 @@ def read_nii_gz(path: Path, read_to_array: bool = True, transpose: bool = False)
     shape = _swap_shape(shape, transpose)
     size_gb = _estimate_size_gb(shape, dtype)
     return shape, dtype, size_gb
-
-
-@staticmethod
-def read_npy(path: Path, read_to_array: bool = True, transpose: bool = False):
-    if read_to_array:
-        arr = np.load(str(path))
-        arr = _ensure_3d(arr)
-        return _swap_array(arr, transpose)
-    
-    # metadata‐only
-    arr = np.load(str(path), mmap_mode='r')
-    shape, dtype = arr.shape, arr.dtype
-    shape = _swap_shape(shape, transpose)
-    size_gb = _estimate_size_gb(shape, dtype)
-    return shape, dtype, size_gb
-
 
 @staticmethod
 def read_zarr(path: Path, read_to_array: bool = True, transpose: bool = False):
@@ -153,8 +142,6 @@ def _read_image(
         reader = read_tiff
     elif suffix in (".nii", ".nii.gz", ".gz"):
         reader = read_nii_gz
-    elif suffix == ".npy":
-        reader = read_npy
     elif ".zarr" in str(file_path):
         reader = read_zarr
     else:
@@ -246,7 +233,7 @@ class FileReader:
                 for file, suffix in zip(self.volume_files, self.volume_types)
             ]
 
-            with tqdm(total=len(futures), desc="Gathering volume info") as pbar:
+            with tqdm(total=len(futures), desc="Gathering volume info", leave=False) as pbar:
                 for idx, future in enumerate(as_completed(futures)):
                     try:
                         shape, dtype, size = future.result()
@@ -277,22 +264,21 @@ class FileReader:
 
         self.volume_dtype = dtypes[0]
     
-    def read(self, z_start, z_end, x_start=None, x_end=None, y_start=None, y_end=None):
+    def read(self, z_start=0, z_end=None, y_start=0, y_end=None, x_start=0, x_end=None):
         # 1) defaults
-        _, full_y, full_x = self.volume_shape  # type: ignore
-        x0, x1 = (0 if x_start is None else x_start,
-                full_x if x_end   is None else x_end)
-        y0, y1 = (0 if y_start is None else y_start,
-                full_y if y_end   is None else y_end)
-        logger.info(f"Reading volume z: {z_start} - {z_end}, y: {y0} - {y1} x: {x0} - {x1}")
-        dz = z_end - z_start
+        z0, z1 = z_start, (self.volume_shape[0] if z_end is None else z_end)
+        y0, y1 = y_start, (self.volume_shape[1] if y_end is None else y_end)
+        x0, x1 = x_start, (self.volume_shape[2] if x_end is None else x_end)
+        
+        logger.info(f"Reading volume z: {z0} - {z1}, y: {y0} - {y1} x: {x0} - {x1}")
+        dz = z1 - z0
         dy = y1 - y0
         dx = x1 - x0
 
         # 2) find which files overlap this Z-range
         prev_cum = [0] + self.volume_cumulative_z[:-1]
         needed = [i for i, (cum, prev) in enumerate(zip(self.volume_cumulative_z, prev_cum))
-                if prev < z_end and cum > z_start]
+                if prev < z1 and cum > z0]
 
         # 3) memory check
         mem_limit = self.memory_limit_bytes / (1024**3)
@@ -307,8 +293,8 @@ class FileReader:
         offset = 0
         for i in needed:
             base = prev_cum[i]
-            file_z0 = max(0, z_start - base)
-            file_z1 = min(self.volume_cumulative_z[i] - base, z_end - base)
+            file_z0 = max(0, z0 - base)
+            file_z1 = min(self.volume_cumulative_z[i] - base, z1 - base)
             length = file_z1 - file_z0
 
             # load just this file (can use mmap for npy, nibabel, etc)
