@@ -40,7 +40,7 @@ def parse_args():
                         help="Axis to scroll and save 2D slices along (0=z, 1=y, 2=x). Default is 0 (z-axis).")
     
     # Memory limit
-    parser.add_argument("--memory-limit", type=int, default=32,
+    parser.add_argument("--memory-limit", type=int, default=64,
                         help="Maximum memory (in GB) for temp buffers")
 
     return parser.parse_args()
